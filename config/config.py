@@ -14,7 +14,7 @@ class Config:
 
     # Training hyperparameters
     num_epochs = 10
-    batch_size = 8
+    batch_size = 16
     learning_rate = 1e-4
 
     # Model parameters
