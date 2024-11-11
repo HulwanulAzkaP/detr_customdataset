@@ -126,3 +126,23 @@ Project ini kami susun guna menyelesaikan **Tugas Akhir** S1 Sains Data di **Tel
 
 ## Lisensi
 Proyek ini dilisensikan di bawah lisensi MIT.
+
+```mermaid
+flowchart TD
+    A[Input Image + Annotations] --> B[Data Augmentation]
+    B --> C[ResNet-50 Backbone]
+    C --> D[Conv Layer (2048 channels to 256 channels)]
+    D --> E[Flatten Features]
+    E --> F[Positional Encoding]
+    F --> G[Transformer Encoder]
+    G --> H[Transformer Decoder]
+    H --> I[Query Embedding]
+    I --> J1[Classification Head]
+    I --> J2[Bounding Box Regression Head]
+    J1 --> K1[Calculate Classification Loss]
+    J2 --> K2[Calculate Bounding Box Loss]
+    K1 & K2 --> L[Total Loss]
+    L --> M[Backpropagation]
+    M --> N[Optimizer (e.g., Adam)]
+    N --> O[Save Checkpoint]
+```
