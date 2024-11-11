@@ -33,8 +33,13 @@ class DETRModel(nn.Module):
         self.pos_encoder = PositionalEncoding(hidden_dim)
 
         # Transformer
-        self.transformer = Transformer(d_model=hidden_dim, nhead=nheads, num_encoder_layers=num_encoder_layers,
-                                       num_decoder_layers=num_decoder_layers, batch_first=True)
+        self.transformer = Transformer(
+            d_model=hidden_dim,
+            nhead=nheads,
+            num_encoder_layers=num_encoder_layers,
+            num_decoder_layers=num_decoder_layers,
+            batch_first=True
+        )
         self.query_embed = nn.Embedding(num_queries, hidden_dim)
 
         # Detection heads
@@ -46,16 +51,20 @@ class DETRModel(nn.Module):
         features = self.backbone(images)
         features = self.conv(features)
         bs, c, h, w = features.shape
-        features = features.flatten(2).permute(2, 0, 1)
+        features = features.flatten(2).permute(0, 2, 1)  # Shape: (batch_size, seq_len, hidden_dim)
 
         # Positional encoding
         pos_enc = self.pos_encoder(features)
 
         # Prepare queries
-        query_embed = self.query_embed.weight.unsqueeze(1).repeat(1, bs, 1)
+        query_embed = self.query_embed.weight.unsqueeze(0).repeat(bs, 1,
+                                                                  1)  # Shape: (batch_size, num_queries, hidden_dim)
 
         # Pass through Transformer
-        transformer_out = self.transformer(pos_enc.permute(1, 0, 2), query_embed)
+        transformer_out = self.transformer(
+            src=pos_enc,  # Shape: (batch_size, seq_len, hidden_dim)
+            tgt=query_embed  # Shape: (batch_size, num_queries, hidden_dim)
+        )
 
         # Get class and bounding box predictions
         outputs_class = self.class_embed(transformer_out)

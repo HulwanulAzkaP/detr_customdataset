@@ -12,7 +12,7 @@ class Config:
     batch_size = 4
     num_workers = 4
     lr = 1e-4
-    epochs = 1
+    epochs = 100
     num_classes = 3  # Update this based on your dataset
     image_size = (640, 640)
 
