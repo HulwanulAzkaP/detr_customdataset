@@ -10,11 +10,11 @@ def train_one_epoch(model, dataloader, optimizer, device):
         # Move images to the device
         images = [img.to(device) for img in images]
 
-        # Move targets to the device
+        # Move targets to the device and fix the warning
         targets = [
             {
-                "boxes": torch.tensor(t['boxes'], dtype=torch.float32).to(device),
-                "labels": torch.tensor(t['labels'], dtype=torch.int64).to(device)
+                "boxes": t['boxes'].clone().detach().to(device),
+                "labels": t['labels'].clone().detach().to(device)
             }
             for t in targets
         ]
