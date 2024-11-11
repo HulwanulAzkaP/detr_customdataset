@@ -13,7 +13,7 @@ class CocoDetection(Dataset):
             self.coco = json.load(f)
         self.images = self.coco['images']
         self.annotations = self.coco['annotations']
-        self.transforms = T.Compose([T.ToTensor()])
+        self.transforms = T.Compose([T.Resize((512, 512)), T.ToTensor()])
 
     def __len__(self):
         return len(self.images)
@@ -21,23 +21,28 @@ class CocoDetection(Dataset):
     def __getitem__(self, index):
         image_info = self.images[index]
         image_path = os.path.join(self.root, image_info['file_name'])
+
+        # Buka gambar
         image = Image.open(image_path).convert("RGB")
         image = self.transforms(image)
 
         image_id = image_info['id']
         target = [ann for ann in self.annotations if ann['image_id'] == image_id]
 
-        # Get image dimensions
-        img_width, img_height = image.size(1), image.size(2)
+        if len(target) == 0:
+            return image, {"boxes": torch.empty((0, 4)), "labels": torch.empty((0,), dtype=torch.int64)}
 
-        # Prepare bounding boxes and normalize them
-        boxes = [ann['bbox'] for ann in target]  # [x_min, y_min, width, height]
+        # Ambil ukuran gambar
+        img_width, img_height = image.size(2), image.size(1)
+
+        # Ekstrak bounding boxes dan lakukan normalisasi
+        boxes = [ann['bbox'] for ann in target]
         boxes = torch.tensor(boxes, dtype=torch.float32)
-        boxes[:, 0] /= img_width  # Normalize x_min
-        boxes[:, 1] /= img_height  # Normalize y_min
-        boxes[:, 2] /= img_width  # Normalize width
-        boxes[:, 3] /= img_height  # Normalize height
+        boxes[:, [0, 2]] /= img_width  # Normalisasi x dan width
+        boxes[:, [1, 3]] /= img_height  # Normalisasi y dan height
 
+        # Ambil label
         labels = [ann['category_id'] for ann in target]
+        labels = torch.tensor(labels, dtype=torch.int64)
 
-        return image, {"boxes": boxes, "labels": torch.tensor(labels, dtype=torch.int64)}
+        return image, {"boxes": boxes, "labels": labels}

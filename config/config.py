@@ -11,9 +11,12 @@ class Config:
     annotations_train = 'dataset/train/_annotations.coco.json'
     valid_data_path = 'dataset/valid/'
     annotations_valid = 'dataset/valid/_annotations.coco.json'
+    test_data_path = 'dataset/test/'
+    annotations_test = 'dataset/test/_annotations.coco.json'
+
 
     # Training hyperparameters
-    num_epochs = 10
+    num_epochs = 20
     batch_size = 16
     learning_rate = 1e-4
 

@@ -47,6 +47,9 @@ class DETRModel(nn.Module):
         self.bbox_embed = nn.Linear(hidden_dim, 4)
 
     def forward(self, images, targets=None):
+        # Move images to the correct device
+        device = images.device
+
         # Extract features using the backbone
         features = self.backbone(images)
         features = self.conv(features)
@@ -69,5 +72,9 @@ class DETRModel(nn.Module):
         # Get class and bounding box predictions
         outputs_class = self.class_embed(transformer_out)
         outputs_bbox = self.bbox_embed(transformer_out).sigmoid()
+
+        # Ensure outputs are on the correct device
+        outputs_class = outputs_class.to(device)
+        outputs_bbox = outputs_bbox.to(device)
 
         return outputs_class, outputs_bbox
