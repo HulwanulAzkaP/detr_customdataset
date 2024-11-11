@@ -4,7 +4,6 @@ from scipy.optimize import linear_sum_assignment
 
 
 def compute_loss(outputs_class, outputs_bbox, targets):
-    # Flatten outputs for class and bounding boxes
     batch_size, num_queries, num_classes_plus_one = outputs_class.shape
     pred_classes = outputs_class.view(batch_size * num_queries, num_classes_plus_one)
     pred_boxes = outputs_bbox.view(batch_size * num_queries, 4)
@@ -25,20 +24,14 @@ def compute_loss(outputs_class, outputs_bbox, targets):
 
     # Bounding box regression loss
     matched_pred_boxes = pred_boxes[indices]
-    bbox_loss = F.l1_loss(matched_pred_boxes, target_boxes)
+    bbox_loss = F.l1_loss(matched_pred_boxes, target_boxes, reduction='mean')
 
-    # Total loss
     total_loss = class_loss + bbox_loss
     return total_loss
 
 
 def match_predictions(pred_boxes, target_boxes):
-    """Match predictions to targets using the Hungarian algorithm."""
-    # Compute the L1 distance between predicted boxes and target boxes
     cost_matrix = torch.cdist(pred_boxes, target_boxes, p=1).cpu().detach().numpy()
-
-    # Apply Hungarian algorithm to find the best matches
     row_indices, col_indices = linear_sum_assignment(cost_matrix)
     indices = row_indices
-
     return torch.tensor(indices, dtype=torch.long)
