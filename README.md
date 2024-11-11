@@ -22,7 +22,7 @@ Import Roboflow version menjadi **coco JSON** kemudian download filenya dan extr
 1. Clone repositori ini:
 git clone https://github.com/HulwanulAzkaP/detr_customdataset
 
-    cd detr_customdataset
+    ``cd detr_customdataset``
 
 2. Buat virtual environment:
 ```
