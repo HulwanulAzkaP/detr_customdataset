@@ -7,13 +7,17 @@ def train_one_epoch(model, dataloader, optimizer, device):
     model.train()
     total_loss = 0
     for images, targets in tqdm(dataloader):
-        # Move images and targets to the device
+        # Move images to the device
         images = [img.to(device) for img in images]
-        targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
-        # Check device placement
-        print(f"Images on device: {images[0].device}")
-        print(f"Targets on device: {targets[0]['boxes'].device}")
+        # Move targets to the device
+        targets = [
+            {
+                "boxes": torch.tensor(t['boxes'], dtype=torch.float32).to(device),
+                "labels": torch.tensor(t['labels'], dtype=torch.int64).to(device)
+            }
+            for t in targets
+        ]
 
         optimizer.zero_grad()
         outputs_class, outputs_bbox = model(torch.stack(images).to(device))
