@@ -3,6 +3,8 @@ import json
 from PIL import Image
 from torch.utils.data import Dataset
 import torchvision.transforms as T
+import torch
+
 
 class CocoDetection(Dataset):
     def __init__(self, root, annotation):
@@ -24,7 +26,18 @@ class CocoDetection(Dataset):
 
         image_id = image_info['id']
         target = [ann for ann in self.annotations if ann['image_id'] == image_id]
-        boxes = [ann['bbox'] for ann in target]
+
+        # Get image dimensions
+        img_width, img_height = image.size(1), image.size(2)
+
+        # Prepare bounding boxes and normalize them
+        boxes = [ann['bbox'] for ann in target]  # [x_min, y_min, width, height]
+        boxes = torch.tensor(boxes, dtype=torch.float32)
+        boxes[:, 0] /= img_width  # Normalize x_min
+        boxes[:, 1] /= img_height  # Normalize y_min
+        boxes[:, 2] /= img_width  # Normalize width
+        boxes[:, 3] /= img_height  # Normalize height
+
         labels = [ann['category_id'] for ann in target]
 
-        return image, {"boxes": boxes, "labels": labels}
+        return image, {"boxes": boxes, "labels": torch.tensor(labels, dtype=torch.int64)}
