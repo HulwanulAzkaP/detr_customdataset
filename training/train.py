@@ -70,7 +70,7 @@ def evaluate_model(model, dataloader, device):
             pred_scores, pred_labels = pred_probs.max(-1)
 
             # Filter predictions by confidence threshold
-            keep = pred_scores > conf_threshold
+            keep = pred_scores > Config.conf_threshold
             pred_labels = pred_labels[keep]
             pred_boxes = outputs_bbox[keep]
 
