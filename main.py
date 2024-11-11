@@ -3,6 +3,10 @@ from models.detr_model import DETRModel
 from data.dataloader import get_dataloader
 from training.train import train_one_epoch
 import torch.optim as optim
+import sys
+from training.train import train_one_epoch
+print("Python Path:", sys.path)
+
 
 if __name__ == "__main__":
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
