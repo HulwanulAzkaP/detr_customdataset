@@ -1,29 +1,26 @@
+# config/config.py
+
 import torch
 
 class Config:
     # Device configuration
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    seed = 42
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    # Model and training settings
-    checkpoint = 'facebook/detr-resnet-50'
-    confidence_threshold = 0.5
-    iou_threshold = 0.8
-    batch_size = 4
-    num_workers = 4
-    lr = 1e-4
-    epochs = 100
-    num_classes = 3  # Update this based on your dataset
-    image_size = (640, 640)
-
-    # Dataset paths
+    # Paths
     train_data_path = 'dataset/train/'
-    valid_data_path = 'dataset/valid/'
-    test_data_path = 'dataset/test/'
     annotations_train = 'dataset/train/_annotations.coco.json'
+    valid_data_path = 'dataset/valid/'
     annotations_valid = 'dataset/valid/_annotations.coco.json'
-    annotations_test = 'dataset/test/_annotations.coco.json'
 
-    # Checkpoints
-    checkpoint_dir = 'checkpoints/'
-    model_save_path = 'checkpoints/detr_model.pth'
+    # Training hyperparameters
+    num_epochs = 10
+    batch_size = 8
+    learning_rate = 1e-4
+
+    # Model parameters
+    num_classes = 3  # Number of object classes + background
+    num_queries = 100
+    hidden_dim = 256
+    nheads = 8
+    num_encoder_layers = 6
+    num_decoder_layers = 6
