@@ -44,7 +44,7 @@ def train_one_epoch(model, dataloader, optimizer, device, training=True):
     return total_loss / len(dataloader)
 
 
-def evaluate_model(model, dataloader, device, conf_threshold=0.5):
+def evaluate_model(model, dataloader, device):
     """Evaluate the model on the test set and calculate metrics."""
     model.eval()
     pred_boxes_list = []

@@ -27,3 +27,6 @@ class Config:
     nheads = 8
     num_encoder_layers = 6
     num_decoder_layers = 6
+
+    # Confidence threshold for evaluation
+    conf_threshold = 0.5
