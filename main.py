@@ -30,7 +30,7 @@ def save_checkpoint(model, optimizer, epoch, filepath):
 def load_checkpoint(model, optimizer, filepath, device):
     """Load the model and optimizer state."""
     if os.path.exists(filepath):
-        checkpoint = torch.load(filepath, map_location=device)
+        checkpoint = torch.load(filepath, map_location=device, weights_only=True)
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         print(f"Checkpoint loaded from {filepath} (epoch {checkpoint['epoch']})")
