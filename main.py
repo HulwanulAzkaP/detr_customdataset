@@ -3,6 +3,7 @@ import torch
 from models.detr_model import DETRModel
 from data.dataloader import get_dataloader
 from training.train import train_one_epoch, evaluate_model
+from PIL import Image, ImageDraw, ImageFont
 import torch.optim as optim
 from config.config import Config
 import os
@@ -11,9 +12,10 @@ import torch.nn.functional as F
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Script for training, evaluation, or inference with DETRModel.")
-    parser.add_argument('--mode', type=str, choices=['train', 'inference', 'eval'], required=True,
-                        help="Mode to run the script: train, inference, or eval")
+    parser = argparse.ArgumentParser(
+        description="Script for training, evaluation, inference, or prediction with DETRModel.")
+    parser.add_argument('--mode', type=str, choices=['train', 'inference', 'eval', 'predict'], required=True,
+                        help="Mode to run the script: train, inference, eval, or predict")
     return parser.parse_args()
 
 
@@ -49,37 +51,55 @@ def save_evaluation_metrics(epoch, metrics, filepath="evaluation_metrics.csv"):
         writer.writerow([epoch, metrics['precision'], metrics['recall'], metrics['f1_score']])
 
 
-def inference(model, dataloader, device):
-    """Run inference on the test dataset and print predictions."""
+def draw_predictions_on_image(image, boxes, labels, scores, output_path):
+    """Draw bounding boxes and labels on the image and save it."""
+    draw = ImageDraw.Draw(image)
+    for box, label, score in zip(boxes, labels, scores):
+        box = box.cpu().numpy()
+        label = label.item()
+        score = score.item()
+
+        # Define box coordinates
+        x1, y1, x2, y2 = box
+        draw.rectangle([x1, y1, x2, y2], outline="red", width=3)
+
+        # Draw label and confidence score
+        text = f"Class {label} ({score:.2f})"
+        draw.text((x1, y1), text, fill="white")
+
+    image.save(output_path)
+    print(f"Saved prediction to {output_path}")
+
+
+def predict(model, dataloader, device):
+    """Run predictions on the test dataset and save labeled images."""
     model.eval()
     with torch.no_grad():
         for idx, (images, _) in enumerate(dataloader):
-            images = [img.to(device) for img in images]
-            outputs_class, outputs_bbox = model(torch.stack(images).to(device))
+            for i, image in enumerate(images):
+                image = image.to(device)
+                outputs_class, outputs_bbox = model(image.unsqueeze(0))
 
-            # Apply softmax to get class probabilities
-            class_probs = F.softmax(outputs_class, dim=-1)
+                # Apply softmax to get class probabilities
+                class_probs = F.softmax(outputs_class, dim=-1)
 
-            # Set a lower threshold for confidence to debug
-            confidence_threshold = 0.3
-            for i, (probs, bboxes) in enumerate(zip(class_probs, outputs_bbox)):
-                # Get the highest class probabilities and associated class labels
-                max_probs, labels = probs.max(dim=-1)
-
-                # Debug: Print raw probabilities and labels
-                print(f"Image {idx} (Batch {i}) - Max probabilities:", max_probs)
-                print(f"Image {idx} (Batch {i}) - Predicted labels:", labels)
-
-                # Filter based on confidence threshold
+                # Confidence threshold
+                confidence_threshold = 0.5
+                max_probs, labels = class_probs.squeeze(0).max(dim=-1)
                 keep = max_probs > confidence_threshold
+
                 filtered_labels = labels[keep]
                 filtered_probs = max_probs[keep]
-                filtered_bboxes = bboxes[keep]
+                filtered_bboxes = outputs_bbox.squeeze(0)[keep]
 
-                # Print results for this image
-                print(f"Image {idx} (Batch {i}):")
-                for label, prob, bbox in zip(filtered_labels, filtered_probs, filtered_bboxes):
-                    print(f"Class: {label.item()}, Confidence: {prob.item():.2f}, BBox: {bbox.cpu().numpy()}")
+                # Convert normalized boxes to original image dimensions
+                original_image = Image.open(f"{Config.test_data_path}/{dataloader.dataset.images[idx]['file_name']}")
+                w, h = original_image.size
+                scaled_boxes = filtered_bboxes * torch.tensor([w, h, w, h], device=device)
+
+                # Draw predictions and save image
+                output_path = f"predictions/predicted_image_{idx}_{i}.png"
+                draw_predictions_on_image(original_image, scaled_boxes, filtered_labels, filtered_probs, output_path)
 
 
 if __name__ == "__main__":
@@ -149,6 +169,12 @@ if __name__ == "__main__":
             f"Validation Metrics: Precision={metrics['precision']:.4f}, Recall={metrics['recall']:.4f}, F1-Score={metrics['f1_score']:.4f}")
 
     elif args.mode == 'inference':
-        # Use the test data for inference
         test_loader = get_dataloader(Config.test_data_path, Config.annotations_test, Config.batch_size)
         inference(model, test_loader, device)
+
+    elif args.mode == 'predict':
+        # Ensure output directory exists
+        os.makedirs("predictions", exist_ok=True)
+
+        test_loader = get_dataloader(Config.test_data_path, Config.annotations_test, 1)
+        predict(model, test_loader, device)
