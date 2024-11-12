@@ -7,6 +7,7 @@ import torch.optim as optim
 from config.config import Config
 import os
 import csv
+import torch.nn.functional as F
 
 
 def parse_args():
@@ -52,11 +53,33 @@ def inference(model, dataloader, device):
     """Run inference on the test dataset and print predictions."""
     model.eval()
     with torch.no_grad():
-        for images, _ in dataloader:
+        for idx, (images, _) in enumerate(dataloader):
             images = [img.to(device) for img in images]
             outputs_class, outputs_bbox = model(torch.stack(images).to(device))
-            # Add additional code here to process outputs_class and outputs_bbox as needed
-            print("Inference outputs:", outputs_class, outputs_bbox)
+
+            # Apply softmax to get class probabilities
+            class_probs = F.softmax(outputs_class, dim=-1)
+
+            # Set a lower threshold for confidence to debug
+            confidence_threshold = 0.3
+            for i, (probs, bboxes) in enumerate(zip(class_probs, outputs_bbox)):
+                # Get the highest class probabilities and associated class labels
+                max_probs, labels = probs.max(dim=-1)
+
+                # Debug: Print raw probabilities and labels
+                print(f"Image {idx} (Batch {i}) - Max probabilities:", max_probs)
+                print(f"Image {idx} (Batch {i}) - Predicted labels:", labels)
+
+                # Filter based on confidence threshold
+                keep = max_probs > confidence_threshold
+                filtered_labels = labels[keep]
+                filtered_probs = max_probs[keep]
+                filtered_bboxes = bboxes[keep]
+
+                # Print results for this image
+                print(f"Image {idx} (Batch {i}):")
+                for label, prob, bbox in zip(filtered_labels, filtered_probs, filtered_bboxes):
+                    print(f"Class: {label.item()}, Confidence: {prob.item():.2f}, BBox: {bbox.cpu().numpy()}")
 
 
 if __name__ == "__main__":
@@ -122,8 +145,10 @@ if __name__ == "__main__":
     elif args.mode == 'eval':
         valid_loader = get_dataloader(Config.valid_data_path, Config.annotations_valid, Config.batch_size)
         metrics = evaluate_model(model, valid_loader, device)
-        print(f"Validation Metrics: Precision={metrics['precision']:.4f}, Recall={metrics['recall']:.4f}, F1-Score={metrics['f1_score']:.4f}")
+        print(
+            f"Validation Metrics: Precision={metrics['precision']:.4f}, Recall={metrics['recall']:.4f}, F1-Score={metrics['f1_score']:.4f}")
 
     elif args.mode == 'inference':
+        # Use the test data for inference
         test_loader = get_dataloader(Config.test_data_path, Config.annotations_test, Config.batch_size)
         inference(model, test_loader, device)
