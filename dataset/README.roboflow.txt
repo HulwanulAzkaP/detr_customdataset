@@ -1,8 +1,8 @@
 
-detr_api - v1 2024-10-13 5:06pm
+detr_api2 - v1 2024-11-12 1:18am
 ==============================
 
-This dataset was exported via roboflow.com on October 13, 2024 at 5:08 PM GMT
+This dataset was exported via roboflow.com on November 12, 2024 at 1:19 AM GMT
 
 Roboflow is an end-to-end computer vision platform that helps you
 * collaborate with your team on computer vision projects
@@ -17,8 +17,8 @@ visit https://github.com/roboflow/notebooks
 
 To find over 100k other datasets and pre-trained models, visit https://universe.roboflow.com
 
-The dataset includes 228 images.
-Api-asap-R5wA are annotated in COCO format.
+The dataset includes 641 images.
+Api-asap-R5wA-Fire-f80i are annotated in COCO format.
 
 The following pre-processing was applied to each image:
 * Auto-orientation of pixel data (with EXIF-orientation stripping)

@@ -1,5 +1,5 @@
-# detr_api > 2024-10-13 5:06pm
-https://universe.roboflow.com/fire-qdubq/detr_api
+# detr_api2 > 2024-11-12 1:18am
+https://universe.roboflow.com/fire-qdubq/detr_api2
 
 Provided by a Roboflow user
 License: CC BY 4.0
