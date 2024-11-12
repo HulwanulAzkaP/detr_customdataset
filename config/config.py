@@ -16,9 +16,12 @@ class Config:
 
 
     # Training hyperparameters
-    num_epochs = 20
+    num_epochs = 500
     batch_size = 16
     learning_rate = 1e-4
+    weight_decay = 1e-6  # Regularization parameter
+    patience = 15  # Early stopping patience (epochs)
+    min_delta = 1e-5  # Minimum change to qualify as an improvement
 
     # Model parameters
     num_classes = 3  # Number of object classes + background

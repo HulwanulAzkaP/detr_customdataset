@@ -84,6 +84,5 @@ def evaluate_model(model, dataloader, device):
             if targets:
                 target_boxes_list.extend([t['boxes'].cpu() for t in targets])
 
-    # Calculate metrics
     metrics = calculate_metrics(pred_boxes_list, pred_labels_list, target_boxes_list, target_labels_list)
     return metrics
