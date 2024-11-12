@@ -1,3 +1,4 @@
+import argparse
 import torch
 from models.detr_model import DETRModel
 from data.dataloader import get_dataloader
@@ -6,6 +7,13 @@ import torch.optim as optim
 from config.config import Config
 import os
 import csv
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Script for training, evaluation, or inference with DETRModel.")
+    parser.add_argument('--mode', type=str, choices=['train', 'inference', 'eval'], required=True,
+                        help="Mode to run the script: train, inference, or eval")
+    return parser.parse_args()
 
 
 def save_checkpoint(model, optimizer, epoch, filepath):
@@ -40,7 +48,19 @@ def save_evaluation_metrics(epoch, metrics, filepath="evaluation_metrics.csv"):
         writer.writerow([epoch, metrics['precision'], metrics['recall'], metrics['f1_score']])
 
 
+def inference(model, dataloader, device):
+    """Run inference on the test dataset and print predictions."""
+    model.eval()
+    with torch.no_grad():
+        for images, _ in dataloader:
+            images = [img.to(device) for img in images]
+            outputs_class, outputs_bbox = model(torch.stack(images).to(device))
+            # Add additional code here to process outputs_class and outputs_bbox as needed
+            print("Inference outputs:", outputs_class, outputs_bbox)
+
+
 if __name__ == "__main__":
+    args = parse_args()
     device = Config.device
     print(f"Using device: {device}")
 
@@ -54,59 +74,56 @@ if __name__ == "__main__":
     ).to(device)
     print(f"Model is on device: {next(model.parameters()).device}")
 
-    train_loader = get_dataloader(Config.train_data_path, Config.annotations_train, Config.batch_size)
-    valid_loader = get_dataloader(Config.valid_data_path, Config.annotations_valid, Config.batch_size)
-    test_loader = get_dataloader(Config.test_data_path, Config.annotations_test, Config.batch_size)
+    if args.mode == 'train':
+        train_loader = get_dataloader(Config.train_data_path, Config.annotations_train, Config.batch_size)
+        valid_loader = get_dataloader(Config.valid_data_path, Config.annotations_valid, Config.batch_size)
+        optimizer = optim.Adam(model.parameters(), lr=Config.learning_rate, weight_decay=Config.weight_decay)
+        checkpoint_path = "model_checkpoint.pth"
+        start_epoch = load_checkpoint(model, optimizer, checkpoint_path, device)
 
-    # Optimizer dengan weight decay untuk regularisasi
-    optimizer = optim.Adam(model.parameters(), lr=Config.learning_rate, weight_decay=Config.weight_decay)
-    checkpoint_path = "model_checkpoint.pth"
-    start_epoch = load_checkpoint(model, optimizer, checkpoint_path, device)
+        best_valid_loss = float('inf')
+        patience = Config.patience
+        patience_counter = 0
 
-    # Early stopping parameters
-    best_valid_loss = float('inf')
-    patience = Config.patience
-    patience_counter = 0
+        for epoch in range(start_epoch, Config.num_epochs):
+            print(f"\nStarting Epoch {epoch + 1}/{Config.num_epochs}")
 
-    for epoch in range(start_epoch, Config.num_epochs):
-        print(f"\nStarting Epoch {epoch + 1}/{Config.num_epochs}")
+            train_loss = train_one_epoch(model, train_loader, optimizer, device, training=True)
+            print(f"Epoch {epoch + 1}, Training Loss: {train_loss:.4f}")
 
-        train_loss = train_one_epoch(model, train_loader, optimizer, device, training=True)
-        print(f"Epoch {epoch + 1}, Training Loss: {train_loss:.4f}")
+            print("\nEvaluating on validation set...")
+            valid_loss = train_one_epoch(model, valid_loader, optimizer, device, training=False)
+            print(f"Epoch {epoch + 1}, Validation Loss: {valid_loss:.4f}")
 
-        print("\nEvaluating on validation set...")
-        valid_loss = train_one_epoch(model, valid_loader, optimizer, device, training=False)
-        print(f"Epoch {epoch + 1}, Validation Loss: {valid_loss:.4f}")
+            if (epoch + 1) % 10 == 0:
+                save_checkpoint(model, optimizer, epoch + 1, checkpoint_path)
 
-        # Save checkpoint every 10 epochs
-        if (epoch + 1) % 10 == 0:
-            save_checkpoint(model, optimizer, epoch + 1, checkpoint_path)
+            if valid_loss < best_valid_loss:
+                best_valid_loss = valid_loss
+                patience_counter = 0
+                save_checkpoint(model, optimizer, epoch + 1, checkpoint_path)
+                print("Validation loss improved, saving model.")
+            else:
+                patience_counter += 1
+                print(f"Validation loss did not improve for {patience_counter} epochs.")
 
-        # Early Stopping Logic
-        if valid_loss < best_valid_loss:
-            best_valid_loss = valid_loss
-            patience_counter = 0
-            save_checkpoint(model, optimizer, epoch + 1, checkpoint_path)
-            print("Validation loss improved, saving model.")
-        else:
-            patience_counter += 1
-            print(f"Validation loss did not improve for {patience_counter} epochs.")
+            if patience_counter >= patience:
+                print("Early stopping triggered.")
+                break
 
-        if patience_counter >= patience:
-            print("Early stopping triggered.")
-            break
+            metrics = evaluate_model(model, valid_loader, device)
+            print(f"Precision: {metrics['precision']:.4f}")
+            print(f"Recall: {metrics['recall']:.4f}")
+            print(f"F1-Score: {metrics['f1_score']:.4f}")
+            save_evaluation_metrics(epoch + 1, metrics)
 
-        # Evaluate on validation set and save metrics
+        print("\nTraining and validation completed!")
+
+    elif args.mode == 'eval':
+        valid_loader = get_dataloader(Config.valid_data_path, Config.annotations_valid, Config.batch_size)
         metrics = evaluate_model(model, valid_loader, device)
-        print(f"Precision: {metrics['precision']:.4f}")
-        print(f"Recall: {metrics['recall']:.4f}")
-        print(f"F1-Score: {metrics['f1_score']:.4f}")
-        save_evaluation_metrics(epoch + 1, metrics)
+        print(f"Validation Metrics: Precision={metrics['precision']:.4f}, Recall={metrics['recall']:.4f}, F1-Score={metrics['f1_score']:.4f}")
 
-    print("\nEvaluating on test set...")
-    metrics = evaluate_model(model, test_loader, device)
-    print(f"Test Precision: {metrics['precision']:.4f}")
-    print(f"Test Recall: {metrics['recall']:.4f}")
-    print(f"Test F1-Score: {metrics['f1_score']:.4f}")
-
-    print("\nTraining and evaluation completed!")
+    elif args.mode == 'inference':
+        test_loader = get_dataloader(Config.test_data_path, Config.annotations_test, Config.batch_size)
+        inference(model, test_loader, device)
